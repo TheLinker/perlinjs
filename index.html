@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="canvas.js" ></script>
+<script src="rand.js" ></script>
+<!-- <script src="perlin2.js" ></script> -->
+<!-- <script src="openSimplex.js" ></script> -->
+<script src="simplexNoise.js" ></script>
+<script src="jquery-3.1.1.min.js"></script>
+<link rel="stylesheet" type="text/css" href="highcharts/js/css/highcharts.css">
+<script type="text/javascript" src="highcharts/js/js/highcharts.js"></script>
+<style type="text/css">
+    html,body,canvas {
+        height: 100%;
+        width: 100%;
+        margin: 0px;
+        padding: 0px;
+        overflow: hidden;
+    }
+
+    .panel {
+        position: fixed;
+        right: 10px;
+        top: 10px;
+        background-color: rgba(0,0,0,0.7);
+        padding: 10px;
+    }
+
+    .label {
+        color: rgb(200,200,200);
+        display: block;
+    }
+
+    .text-input {
+        width: 100%;
+        display: block;
+    }
+    #info-panel {
+        position: fixed;
+        left: 10;
+        top: 10;
+        background-color: rgba(0,0,0,0.7);
+        color: rgb(200,200,200);
+        padding: 10px;
+    }
+    </style>
+</head>
+<body>
+<div id="info-panel"></div>
+<div class="panel">
+    <button id="btn">download!</button>
+    <button id="redraw">redraw</button>
+    <label class="label">Seed: </label>
+    <input class="text-input" id="seed" value="0">
+    <label class="label">Zoom: </label>
+    <input class="text-input" id="zoom" value="150">
+    <label class="label">Scale Min: </label>
+    <input class="text-input" id="scale_min" value="0">
+    <label class="label">Scale Max: </label>
+    <input class="text-input" id="scale_max" value="255">
+    <label class="label">Offset X: </label>
+    <input class="text-input" id="offset_x" value="0">
+    <label class="label">Offset Y: </label>
+    <input class="text-input" id="offset_y" value="0">
+</div>
+<script type="text/javascript">
+    $(function () {
+        // rand
+        // srand(0);
+        // arr=[];
+        // for (var i = 0; i < 10000; i++) {
+        //     arr.push({x: i, y: rand()})
+        // }
+
+        // $('#container').highcharts({
+        //     yAxis: {
+        //         plotLines: [{
+        //             value: 0,
+        //             width: 1,
+        //             color: '#808080'
+        //         }]
+        //     },
+        //     series: [{
+        //         name: 'Perlin1',
+        //         data: arr,
+        //         turboThreshold: 120000
+        //     }]
+        // });
+
+        //1d
+        // srand(0);
+        // arr=[];
+        // for (var i = 0; i < 80; i+=0.01) {
+        //     arr.push({x: i, y: noise1(i)})
+        // }
+
+        // $('#container').highcharts({
+        //     yAxis: {
+        //         plotLines: [{
+        //             value: 0,
+        //             width: 1,
+        //             color: '#808080'
+        //         }]
+        //     },
+        //     series: [{
+        //         name: 'Perlin1',
+        //         data: arr,
+        //         turboThreshold: 120000
+        //     }]
+        // });
+
+        redraw();
+    });
+
+    $(function() {
+        $('input').keypress(function(e){
+            if(e.keyCode == 13)
+                redraw();
+        });
+        $('#redraw').click(function(){
+            redraw();
+        });
+        $('#btn').click(function(){
+            var durl = canvas.toDataURL("image/png");
+
+            window.open(durl);
+        })
+    })
+
+    function redraw() {
+        var info = $('#info-panel').html('');
+        simplexNoise($('#seed').val());
+
+        // 2d
+        var canvas2 = $('#canvas');
+        var context = canvas2[0].getContext('2d');
+
+        var width  = canvas2.width(),
+            height = canvas2.height(),
+            buffer = new Uint8ClampedArray(width * height * 4); // have enough bytes
+
+        var zoom=$('#zoom').val();
+        var scale_min=parseInt($('#scale_min').val());
+        var scale_max=parseInt($('#scale_max').val());
+        var offset_x=parseInt($('#offset_x').val());
+        var offset_y=parseInt($('#offset_y').val());
+
+        info.append(width + "x" + height + "<br/>");
+        var max = -10000, min = 10000;
+        for(var y = 0; y < height; y++) {
+            for(var x = 0; x < width; x++) {
+                val = (noise2((x+offset_x)/zoom,(y+offset_y)/zoom) + 1) / 2; //[0,1]
+                val = val * (scale_max-scale_min); //[0,scale_max-scale_min]
+                val = val + scale_min; // [scale_min,scale_max]
+
+                var pos = (y * width + x) * 4; // position in buffer based on x and y
+                buffer[pos  ] = val;           // some R value [0, 255]
+                buffer[pos+1] = val;           // some G value
+                buffer[pos+2] = val;           // some B value
+                buffer[pos+3] = 255;           // set alpha channel
+
+                if(val < min) min = val;
+                if(max < val) max = val;
+            }
+        }
+        info.append((Math.round(min * 100) / 100) + " < x < " + (Math.round(max * 100) / 100));
+
+        // create imageData object
+        var idata = context.createImageData(width, height);
+
+        // set our buffer as source
+        idata.data.set(buffer);
+
+        // update canvas with new data
+        context.putImageData(idata, 0, 0);
+    }
+</script>
+<!-- <div id="container" style="min-width: 310px; height: 400px; margin: 0 auto"></div> -->
+<canvas id="canvas"></canvas>
+</body>
+</html>
